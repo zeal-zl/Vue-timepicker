@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>用Vue实现timepicker功能</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="jquery.min.js"></script>
+    <script src="vue.min.js"></script>
+</head>
+<body>
+<div id="app">
+    <time-box :hour="hour" :minutes="minutes"></time-box>
+    <time-picker :h="hour" :m="minutes" :mode="mode" v-if="showTimePicker"></time-picker>
+</div>
+</body>
+<script>
+    var positions = [
+        [0, 5],
+        [54.5, 16.6],
+        [94.4, 59.5],
+        [109, 114],
+        [94.4, 168.5],
+        [54.5, 208.4],
+        [0, 223],
+        [-54.5, 208.4],
+        [-94.4, 168.5],
+        [-109, 114],
+        [-94.4, 59.5],
+        [-54.5, 19.6],
+    ];
+    Vue.component("time-box", {
+        template: '<div class="timeBox" @click="opentime">\
+                   <span @click="changeCurrent(\'h\')">{{hour}}</span>\
+                   <span> : </span>\
+                   <span @click="changeCurrent(\'m\')">{{minutes}}</span>\
+                   </div>',
+        props: ["hour", "minutes"],
+
+        methods: {
+            opentime: function () {
+                app.$emit("openTimePicker")
+            },
+            changeCurrent: function (type) {
+                if (type == 'h') {
+                    app.mode = 0;
+                } else {
+                    app.mode = 1;
+                }
+            }
+
+        }
+
+    })
+    ;
+    Vue.component("time-picker", {
+        template: '\
+        <div class="clock-wrap">\
+		    <div class="clock">\
+                <div class="timedisplay">\
+                    <div class="innerdisplay">\
+                        <div class="time-left"></div>\
+                        <div class="showtime">\
+                            <span @click="current = 0" :style="{opacity: current == 0 ? 1 : 0.7}">{{fixHour(this.hour)}}</span>\
+                            <span>:</span>\
+                            <span @click="current = 1" :style="{opacity: current == 1 ? 1 : 0.7}">{{fixMinutes(this.minutes)}}</span>\
+                        </div>\
+                        <div class="time-right"></div>\
+                    </div>\
+                </div>\
+                <div class="clockpanel">\
+                    <div class="clockbg"></div>\
+                    <div class="hourpicker">\
+                        <div class="selector" :style="selectorRotateAngle()"></div>\
+                        <span class="hourtxt" v-for="i in 12" :style="getHourStyle(i%12)" @click="current === 0 ? hour = i : minutes = ((5 * i) % 60 || \'00\')">{{current === 0 ? i : ((5 * i) % 60 || "00")}}</span>\
+                    </div>\
+                </div>\
+                <div class="actionbuttons">\
+                    <button @click="closePicker()">\
+                        <div>\
+                            <span>CANCEL</span>\
+                        </div>\
+                    </button>\
+                    <button @click="getTime()">\
+                        <div>\
+                            <span>OK</span>\
+                        </div>\
+                    </button>\
+                </div>\
+            </div>\
+	    </div>',
+        props: ['h', 'm', 'mode'],
+        data: function () {
+            return {
+                current: this.mode,
+                hour: this.h,
+                minutes: this.m
+            }
+        },
+        methods: {
+            //时分保证是两位数
+            fixHour: function (h) {
+                return (h < 10 && h.toString().indexOf(0) !== 0) ? "0" + h : h
+            },
+            fixMinutes: function (m) {
+                return (m < 10 && m.toString().indexOf(0) !== 0) ? "0" + m : m
+            },
+            //分时针的样式
+            selectorRotateAngle: function (i) {
+                if (this.current === 0) {
+                    return {
+                        transform: 'rotateZ(' + (this.hour * 30) + 'deg)'
+                    }
+                } else {
+                    return {
+                        transform: 'rotateZ(' + (this.minutes * 6) + 'deg)'
+                    }
+                }
+            },
+
+            //12格样式
+            getHourStyle: function (i) {
+                var hasSelected = (this.current === 0 && this.hour % 12 === i)
+                    || (this.current === 1 && this.minutes % 60 == (i * 5));
+                var styleObj = {
+                    transform: 'translate(' + positions[i][0] + "px, " + positions[i][1] + "px)",
+                    background: hasSelected ? 'rgb(0, 188, 212)' : 'rgba(255, 255, 255, 0)',
+                    color: !hasSelected ? '#2c3e50' : '#FFF'
+                }
+                return styleObj;
+            },
+
+            //关闭timepicker
+            closePicker: function () {
+                app.$emit('closeTimePicker');
+            },
+            //获取时间
+            getTime: function () {
+                app.$emit('getTime', this.fixHour(this.hour), this.fixMinutes(this.minutes));
+                app.$emit('closeTimePicker');
+            }
+        }
+    })
+
+    var app = new Vue({
+        el: "#app",
+        data: {
+            hour: 12,
+            minutes: 25,
+            mode: 0,
+            showTimePicker: false
+        },
+        computed: {
+            newtime: function (val) {
+                return this.hour
+            }
+        },
+        created: function () {
+            var _this = this
+            this.$on("closeTimePicker", function () {
+                this.showTimePicker = false
+            });
+            this.$on("openTimePicker", function () {
+                this.showTimePicker = true
+            });
+            this.$on("getTime", function (h, m) {
+                this.minutes = m;
+                this.hour = h;
+            });
+            /*setInterval(function(){
+                var time=new Date()
+                app.hour=time.getHours()
+                app.minutes=time.getMinutes()
+
+            },1000)*/
+        },
+
+    })
+
+
+</script>
+</html>
